@@ -39,6 +39,34 @@ return [
     'meta' => [
         'provisional_hours' => 72,
         'confidence_penalty' => 0.2,
+        'graph_version' => 'v20.0',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Supervised approval flow
+    |--------------------------------------------------------------------------
+    |
+    | Every recommended action is human-approved before anything would touch an
+    | ad account. Execution is SIMULATED only — we construct and store the API
+    | call that WOULD be made, keyed off platform + action type, and never send
+    | it. Each action type exposes one numeric parameter the operator can edit
+    | before approving.
+    |
+    */
+
+    'approval' => [
+
+        'actor' => 'demo@growthops.test',
+
+        'parameters' => [
+            'pause' => ['key' => 'budget_cap', 'label' => 'Budget cap (USD, 0 = full pause)', 'default' => 0.0],
+            'scale' => ['key' => 'scale_pct', 'label' => 'Budget increase (%)', 'default' => 20.0],
+            'fix' => ['key' => 'target_cpa', 'label' => 'Target CPA (USD)', 'default' => 50.0],
+            'investigate' => ['key' => 'lookback_days', 'label' => 'Report lookback (days)', 'default' => 7.0],
+        ],
+
+        'default_daily_budget' => 100.0,
     ],
 
     'detector_thresholds' => [

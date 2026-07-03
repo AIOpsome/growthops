@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\RecommendedActions\Schemas;
 
 use App\Models\RecommendedAction;
+use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -53,6 +54,41 @@ class RecommendedActionInfolist
                             ->state(fn (RecommendedAction $record): string => "```json\n".json_encode($record->evidence, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n```")
                             ->markdown()
                             ->columnSpanFull(),
+                    ]),
+                Section::make('Simulated execution')
+                    ->description('SIMULATED — no live ad-account writes.')
+                    ->visible(fn (RecommendedAction $record): bool => $record->executionLog !== null)
+                    ->schema([
+                        TextEntry::make('executionLog.platform')->label('Platform')->badge(),
+                        TextEntry::make('executionLog.simulated_endpoint')
+                            ->label('Endpoint')
+                            ->fontFamily(FontFamily::Mono),
+                        TextEntry::make('execution_payload')
+                            ->hiddenLabel()
+                            ->fontFamily(FontFamily::Mono)
+                            ->state(fn (RecommendedAction $record): string => "```json\n".json_encode($record->executionLog?->simulated_payload ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n```")
+                            ->markdown()
+                            ->columnSpanFull(),
+                    ]),
+                Section::make('Audit trail')
+                    ->description('Immutable — one row per decision.')
+                    ->visible(fn (RecommendedAction $record): bool => $record->audits()->exists())
+                    ->schema([
+                        RepeatableEntry::make('audits')
+                            ->hiddenLabel()
+                            ->schema([
+                                TextEntry::make('from_status')->badge(),
+                                TextEntry::make('to_status')->badge(),
+                                TextEntry::make('actor'),
+                                TextEntry::make('created_at')->dateTime(),
+                                TextEntry::make('reason')->placeholder('—')->columnSpanFull(),
+                                TextEntry::make('edited_value')
+                                    ->label('Edited value')
+                                    ->placeholder('—')
+                                    ->formatStateUsing(fn (mixed $state): ?string => $state === null ? null : json_encode($state, JSON_UNESCAPED_SLASHES))
+                                    ->columnSpanFull(),
+                            ])
+                            ->columns(4),
                     ]),
             ]);
     }
