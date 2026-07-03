@@ -33,6 +33,14 @@ class Campaign extends Model
     }
 
     /**
+     * @return HasMany<Lead, $this>
+     */
+    public function leads(): HasMany
+    {
+        return $this->hasMany(Lead::class);
+    }
+
+    /**
      * @param  Builder<Campaign>  $query
      * @return Builder<Campaign>
      */
@@ -44,6 +52,20 @@ class Campaign extends Model
             ->withSum('dailyMetrics as clicks_total', 'clicks')
             ->withSum('dailyMetrics as conversions_total', 'conversions')
             ->withSum('dailyMetrics as revenue_total', 'revenue');
+    }
+
+    /**
+     * @param  Builder<Campaign>  $query
+     * @return Builder<Campaign>
+     */
+    public function scopeWithLeadTotals(Builder $query): Builder
+    {
+        return $query->withCount([
+            'leads as leads_total',
+            'leads as accepted_leads_total' => fn (Builder $query): Builder => $query->where('status', 'accepted'),
+            'leads as rejected_leads_total' => fn (Builder $query): Builder => $query->where('status', 'rejected'),
+            'leads as pending_leads_total' => fn (Builder $query): Builder => $query->where('status', 'pending'),
+        ]);
     }
 
     /**
@@ -83,6 +105,26 @@ class Campaign extends Model
         return Attribute::get(fn (): float => $this->metricTotal('revenue_total', 'revenue'));
     }
 
+    protected function leadsTotal(): Attribute
+    {
+        return Attribute::get(fn (): int => $this->leadTotal('leads_total'));
+    }
+
+    protected function acceptedLeadsTotal(): Attribute
+    {
+        return Attribute::get(fn (): int => $this->leadTotal('accepted_leads_total', 'accepted'));
+    }
+
+    protected function rejectedLeadsTotal(): Attribute
+    {
+        return Attribute::get(fn (): int => $this->leadTotal('rejected_leads_total', 'rejected'));
+    }
+
+    protected function pendingLeadsTotal(): Attribute
+    {
+        return Attribute::get(fn (): int => $this->leadTotal('pending_leads_total', 'pending'));
+    }
+
     protected function cpc(): Attribute
     {
         return Attribute::get(fn (): ?float => $this->clicks_total > 0 ? $this->spend_total / $this->clicks_total : null);
@@ -98,6 +140,30 @@ class Campaign extends Model
         return Attribute::get(fn (): ?float => $this->conversions_total > 0 ? $this->spend_total / $this->conversions_total : null);
     }
 
+    protected function cpl(): Attribute
+    {
+        return Attribute::get(fn (): ?float => $this->leads_total > 0 ? $this->spend_total / $this->leads_total : null);
+    }
+
+    protected function roas(): Attribute
+    {
+        return Attribute::get(fn (): ?float => $this->spend_total > 0 ? $this->revenue_total / $this->spend_total : null);
+    }
+
+    protected function epc(): Attribute
+    {
+        return Attribute::get(fn (): ?float => $this->clicks_total > 0 ? $this->revenue_total / $this->clicks_total : null);
+    }
+
+    protected function leadAcceptanceRate(): Attribute
+    {
+        return Attribute::get(function (): ?float {
+            $resolvedLeads = $this->accepted_leads_total + $this->rejected_leads_total;
+
+            return $resolvedLeads > 0 ? ($this->accepted_leads_total / $resolvedLeads) * 100 : null;
+        });
+    }
+
     private function metricTotal(string $attribute, string $column): float
     {
         if (array_key_exists($attribute, $this->attributes)) {
@@ -109,5 +175,24 @@ class Campaign extends Model
         }
 
         return (float) $this->dailyMetrics()->sum($column);
+    }
+
+    private function leadTotal(string $attribute, ?string $status = null): int
+    {
+        if (array_key_exists($attribute, $this->attributes)) {
+            return (int) $this->attributes[$attribute];
+        }
+
+        if (! $this->exists) {
+            return 0;
+        }
+
+        $query = $this->leads();
+
+        if ($status !== null) {
+            $query->where('status', $status);
+        }
+
+        return $query->count();
     }
 }
