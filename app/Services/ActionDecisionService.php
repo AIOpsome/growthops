@@ -32,6 +32,8 @@ final class ActionDecisionService
     public function reject(RecommendedAction $action, string $reason): void
     {
         DB::transaction(function () use ($action, $reason): void {
+            $action = $this->lockPending($action);
+
             ActionAudit::create([
                 'recommended_action_id' => $action->id,
                 'actor' => config('growthops.approval.actor'),
@@ -51,6 +53,8 @@ final class ActionDecisionService
     private function execute(RecommendedAction $action, string $toStatus, float $parameter, ?array $editedValue): ExecutionLog
     {
         return DB::transaction(function () use ($action, $toStatus, $parameter, $editedValue): ExecutionLog {
+            $action = $this->lockPending($action);
+
             $simulated = $this->builder->build($action, $parameter);
 
             $log = ExecutionLog::create([
@@ -75,5 +79,22 @@ final class ActionDecisionService
 
             return $log;
         });
+    }
+
+    /**
+     * Re-read the action row with a row lock inside the current transaction
+     * and assert it is still pending, guarding against concurrent transitions.
+     */
+    private function lockPending(RecommendedAction $action): RecommendedAction
+    {
+        $fresh = RecommendedAction::query()->whereKey($action->id)->lockForUpdate()->first();
+
+        if ($fresh === null || $fresh->status !== 'pending') {
+            throw new InvalidActionTransitionException(
+                "Action [{$action->id}] is not pending (status: ".($fresh->status ?? 'missing').')'
+            );
+        }
+
+        return $fresh;
     }
 }

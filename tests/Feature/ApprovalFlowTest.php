@@ -7,6 +7,7 @@ use App\Models\ExecutionLog;
 use App\Models\RecommendedAction;
 use App\Models\User;
 use App\Services\ActionDecisionService;
+use App\Services\InvalidActionTransitionException;
 use App\Services\SimulatedExecutionBuilder;
 use Livewire\Livewire;
 
@@ -86,6 +87,25 @@ it('applies the edited parameter to the simulated payload', function () {
     expect($log->simulated_payload['daily_budget'])->toBe(15000);
 });
 
+it('refuses to approve, reject, or edit an action that is no longer pending', function () {
+    $action = pendingAction();
+    $service = app(ActionDecisionService::class);
+
+    $service->approve($action);
+    expect($action->refresh()->status)->toBe('approved');
+
+    $auditCountBefore = ActionAudit::query()->where('recommended_action_id', $action->id)->count();
+    $logCountBefore = ExecutionLog::query()->where('recommended_action_id', $action->id)->count();
+
+    expect(fn () => $service->approve($action))->toThrow(InvalidActionTransitionException::class);
+    expect(fn () => $service->reject($action, 'too late'))->toThrow(InvalidActionTransitionException::class);
+    expect(fn () => $service->editThenApprove($action, 10.0))->toThrow(InvalidActionTransitionException::class);
+
+    expect($action->refresh()->status)->toBe('approved')
+        ->and(ActionAudit::query()->where('recommended_action_id', $action->id)->count())->toBe($auditCountBefore)
+        ->and(ExecutionLog::query()->where('recommended_action_id', $action->id)->count())->toBe($logCountBefore);
+});
+
 it('forbids updating or deleting audit rows', function () {
     $action = pendingAction();
     app(ActionDecisionService::class)->reject($action, 'nope');
@@ -119,7 +139,7 @@ it('shapes the simulated payload differently per action type on meta', function 
 
     expect($simulated['simulated_payload'])->toHaveKey($key);
 })->with([
-    'pause' => ['pause', 'status'],
+    'pause' => ['pause', 'daily_budget'],
     'scale' => ['scale', 'daily_budget'],
     'fix' => ['fix', 'bid_strategy'],
     'investigate' => ['investigate', 'fields'],

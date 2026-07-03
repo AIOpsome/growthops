@@ -60,10 +60,15 @@ final class SimulatedExecutionBuilder
         $version = config('growthops.meta.graph_version');
 
         return match ($type) {
-            'pause' => ["POST /{$version}/{$ref}", ['status' => 'PAUSED']],
+            'pause' => ["POST /{$version}/{$ref}", $this->isFullPause($parameter)
+                ? ['status' => 'PAUSED']
+                : ['daily_budget' => $this->toCents($parameter)]],
             'scale' => ["POST /{$version}/{$ref}", ['daily_budget' => $this->scaledBudgetCents($action, $parameter)]],
             'fix' => ["POST /{$version}/{$ref}", ['bid_strategy' => 'COST_CAP', 'bid_amount' => $this->toCents($parameter)]],
-            'investigate' => ["GET /{$version}/{$ref}/insights", ['fields' => ['spend', 'actions', 'cost_per_action_type'], 'date_preset' => 'last_7d']],
+            'investigate' => ["GET /{$version}/{$ref}/insights", [
+                'fields' => ['spend', 'actions', 'cost_per_action_type'],
+                'time_range' => $this->lookbackRange($action, $parameter, 'since', 'until'),
+            ]],
             default => throw new InvalidArgumentException("Unsupported action type [{$type}]."),
         };
     }
@@ -76,10 +81,16 @@ final class SimulatedExecutionBuilder
         $campaign = "customers/{customer-id}/campaigns/{$ref}";
 
         return match ($type) {
-            'pause' => ['CampaignService.MutateCampaigns', ['operations' => [['update' => ['resourceName' => $campaign, 'status' => 'PAUSED'], 'updateMask' => 'status']]]],
+            'pause' => $this->isFullPause($parameter)
+                ? ['CampaignService.MutateCampaigns', ['operations' => [['update' => ['resourceName' => $campaign, 'status' => 'PAUSED'], 'updateMask' => 'status']]]]
+                : ['CampaignBudgetService.MutateCampaignBudgets', ['operations' => [['update' => ['resourceName' => "customers/{customer-id}/campaignBudgets/{$ref}", 'amountMicros' => $this->toMicros($parameter)], 'updateMask' => 'amount_micros']]]],
             'scale' => ['CampaignBudgetService.MutateCampaignBudgets', ['operations' => [['update' => ['resourceName' => "customers/{customer-id}/campaignBudgets/{$ref}", 'amountMicros' => $this->toMicros($this->scaledBudget($action, $parameter))], 'updateMask' => 'amount_micros']]]],
             'fix' => ['CampaignService.MutateCampaigns', ['operations' => [['update' => ['resourceName' => $campaign, 'targetCpa' => ['targetCpaMicros' => $this->toMicros($parameter)]], 'updateMask' => 'target_cpa.target_cpa_micros']]]],
-            'investigate' => ['GoogleAdsService.SearchStream', ['query' => "SELECT campaign.id, metrics.cost_micros, metrics.conversions FROM campaign WHERE campaign.id = {$ref} DURING LAST_7_DAYS"]],
+            'investigate' => (function () use ($ref, $parameter, $action): array {
+                $range = $this->lookbackRange($action, $parameter);
+
+                return ['GoogleAdsService.SearchStream', ['query' => "SELECT campaign.id, metrics.cost_micros, metrics.conversions FROM campaign WHERE campaign.id = {$ref} AND segments.date BETWEEN '{$range['since']}' AND '{$range['until']}'"]];
+            })(),
             default => throw new InvalidArgumentException("Unsupported action type [{$type}]."),
         };
     }
@@ -92,10 +103,15 @@ final class SimulatedExecutionBuilder
         $base = "POST /backstage/api/1.0/{account-id}/campaigns/{$ref}";
 
         return match ($type) {
-            'pause' => [$base, ['is_active' => false]],
+            'pause' => $this->isFullPause($parameter)
+                ? [$base, ['is_active' => false]]
+                : [$base, ['daily_cap' => round($parameter, 2)]],
             'scale' => [$base, ['daily_cap' => round($this->scaledBudget($action, $parameter), 2)]],
             'fix' => [$base, ['cpa_goal' => round($parameter, 2)]],
-            'investigate' => ["GET /backstage/api/1.0/{account-id}/campaigns/{$ref}/performance", ['dimension' => 'day', 'date_range' => 'last_7_days']],
+            'investigate' => ["GET /backstage/api/1.0/{account-id}/campaigns/{$ref}/performance", [
+                'dimension' => 'day',
+                ...$this->lookbackRange($action, $parameter, 'start_date', 'end_date'),
+            ]],
             default => throw new InvalidArgumentException("Unsupported action type [{$type}]."),
         };
     }
@@ -106,10 +122,17 @@ final class SimulatedExecutionBuilder
     private function tiktok(string $type, string $ref, float $parameter, RecommendedAction $action): array
     {
         return match ($type) {
-            'pause' => ['POST /open_api/v1.3/campaign/status/update/', ['campaign_ids' => [$ref], 'operation_status' => 'DISABLE']],
+            'pause' => $this->isFullPause($parameter)
+                ? ['POST /open_api/v1.3/campaign/status/update/', ['campaign_ids' => [$ref], 'operation_status' => 'DISABLE']]
+                : ['POST /open_api/v1.3/campaign/update/', ['campaign_id' => $ref, 'budget' => round($parameter, 2)]],
             'scale' => ['POST /open_api/v1.3/campaign/update/', ['campaign_id' => $ref, 'budget' => round($this->scaledBudget($action, $parameter), 2)]],
             'fix' => ['POST /open_api/v1.3/campaign/update/', ['campaign_id' => $ref, 'deep_bid_type' => 'MIN', 'conversion_bid_price' => round($parameter, 2)]],
-            'investigate' => ['GET /open_api/v1.3/report/integrated/get/', ['dimensions' => ['campaign_id'], 'metrics' => ['spend', 'conversion', 'cost_per_conversion'], 'campaign_ids' => [$ref]]],
+            'investigate' => ['GET /open_api/v1.3/report/integrated/get/', [
+                'dimensions' => ['campaign_id'],
+                'metrics' => ['spend', 'conversion', 'cost_per_conversion'],
+                'campaign_ids' => [$ref],
+                ...$this->lookbackRange($action, $parameter, 'start_date', 'end_date'),
+            ]],
             default => throw new InvalidArgumentException("Unsupported action type [{$type}]."),
         };
     }
@@ -134,6 +157,26 @@ final class SimulatedExecutionBuilder
     private function toMicros(float $amount): int
     {
         return (int) round($amount * 1_000_000);
+    }
+
+    private function isFullPause(float $budgetCap): bool
+    {
+        return $budgetCap <= 0.0;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function lookbackRange(RecommendedAction $action, float $lookbackDays, string $sinceKey = 'since', string $untilKey = 'until'): array
+    {
+        $days = max(1, (int) round($lookbackDays));
+        $until = $action->run_date->copy();
+        $since = $until->copy()->subDays($days - 1);
+
+        return [
+            $sinceKey => $since->toDateString(),
+            $untilKey => $until->toDateString(),
+        ];
     }
 
     /**
