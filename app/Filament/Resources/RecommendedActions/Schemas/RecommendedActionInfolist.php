@@ -38,6 +38,13 @@ class RecommendedActionInfolist
                             ->listWithLineBreaks()
                             ->badge(),
                     ]),
+                Section::make('Narrative')
+                    ->schema([
+                        TextEntry::make('narrative')
+                            ->hiddenLabel()
+                            ->state(fn (RecommendedAction $record): string => $record->ensureNarrative())
+                            ->columnSpanFull(),
+                    ]),
                 Section::make('Evidence')
                     ->schema([
                         TextEntry::make('evidence_payload')

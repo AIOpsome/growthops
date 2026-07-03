@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\ActionNarrator;
 use Database\Factories\RecommendedActionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -33,5 +34,17 @@ class RecommendedAction extends Model
     public function campaign(): BelongsTo
     {
         return $this->belongsTo(Campaign::class);
+    }
+
+    public function ensureNarrative(): string
+    {
+        if (filled($this->narrative)) {
+            return $this->narrative;
+        }
+
+        $this->narrative = app(ActionNarrator::class)->narrate($this);
+        $this->saveQuietly();
+
+        return $this->narrative;
     }
 }

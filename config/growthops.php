@@ -84,4 +84,22 @@ return [
 
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | LLM narrative provider
+    |--------------------------------------------------------------------------
+    |
+    | Any OpenAI-compatible chat-completions gateway works here (Opencode Go,
+    | OpenRouter, etc) — only the env values change. Missing base_url/api_key
+    | falls back to a deterministic template narrative, never a broken UI.
+    |
+    */
+
+    'llm' => [
+        'base_url' => env('LLM_BASE_URL'),
+        'model' => env('LLM_MODEL', 'kimi-k2.7'),
+        'api_key' => env('LLM_API_KEY'),
+        'timeout' => 15,
+    ],
+
 ];
