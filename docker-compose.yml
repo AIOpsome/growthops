@@ -1,0 +1,10 @@
+services:
+  app:
+    build:
+      context: .
+      target: app
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
