@@ -144,6 +144,37 @@ it('imports leads and calculates revenue and lead-quality metrics', function () 
         ->and($noLeadsCampaign->lead_acceptance_rate)->toBeNull();
 });
 
+it('recalculates revenue when an imported lead moves campaign and date', function () {
+    $importer = app(CampaignCsvImporter::class);
+
+    $importer->import(fixture_path('tiktok_campaign_export.csv'));
+    $importer->import(fixture_path('leads_export.csv'));
+
+    $correctionPath = tempnam(sys_get_temp_dir(), 'leads-correction-');
+    file_put_contents($correctionPath, implode(PHP_EOL, [
+        'lead id,date,campaign reference,status,payout',
+        'lead-accepted-1,2026-06-29,TikTok - Zero Clicks,accepted,180.00',
+    ]).PHP_EOL);
+
+    $importer->import($correctionPath);
+
+    $oldCampaign = Campaign::query()->where('name', 'TikTok - Trial')->firstOrFail();
+    $newCampaign = Campaign::query()->where('name', 'TikTok - Zero Clicks')->firstOrFail();
+
+    $oldMetric = DailyMetric::query()
+        ->whereBelongsTo($oldCampaign)
+        ->whereDate('date', '2026-06-28')
+        ->firstOrFail();
+
+    $newMetric = DailyMetric::query()
+        ->whereBelongsTo($newCampaign)
+        ->whereDate('date', '2026-06-29')
+        ->firstOrFail();
+
+    expect($oldMetric->revenue)->toBe('0.00')
+        ->and($newMetric->revenue)->toBe('180.00');
+});
+
 it('rejects malformed CSV files with a clear error', function () {
     expect(fn () => app(CampaignCsvImporter::class)->import(fixture_path('malformed_campaign_export.csv')))
         ->toThrow(CsvImportException::class, 'Unrecognized campaign or leads CSV headers.');

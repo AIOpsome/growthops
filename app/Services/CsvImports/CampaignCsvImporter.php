@@ -239,6 +239,15 @@ class CampaignCsvImporter
 
                 $campaign = $this->campaignForLead($lead['campaign_reference']);
                 $date = CarbonImmutable::parse($lead['date'])->toDateString();
+                $existingLead = Lead::query()
+                    ->with('campaign')
+                    ->where('external_id', $lead['external_id'])
+                    ->first();
+
+                if ($existingLead !== null) {
+                    $previousDate = $existingLead->date->toDateString();
+                    $dailyKeys["{$existingLead->campaign_id}:{$previousDate}"] = [$existingLead->campaign, $previousDate];
+                }
 
                 Lead::query()->updateOrCreate(
                     ['external_id' => $lead['external_id']],
