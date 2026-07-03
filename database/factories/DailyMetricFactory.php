@@ -18,13 +18,16 @@ class DailyMetricFactory extends Factory
      */
     public function definition(): array
     {
+        $clicks = fake()->numberBetween(50, 5000);
+        $conversions = fake()->randomFloat(2, 0, 250);
+
         return [
             'campaign_id' => Campaign::factory(),
             'date' => fake()->date(),
             'spend' => fake()->randomFloat(2, 20, 800),
             'impressions' => fake()->numberBetween(1000, 200000),
-            'clicks' => fake()->numberBetween(50, 5000),
-            'conversions' => fake()->randomFloat(2, 0, 250),
+            'clicks' => $clicks,
+            'conversions' => $conversions,
             'revenue' => fake()->randomFloat(2, 0, 5000),
         ];
     }

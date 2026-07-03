@@ -18,7 +18,7 @@ class CampaignFactory extends Factory
     public function definition(): array
     {
         return [
-            'platform' => fake()->randomElement(['meta', 'google']),
+            'platform' => fake()->randomElement(['meta', 'google', 'taboola', 'tiktok']),
             'external_id' => fake()->optional()->numerify('##########'),
             'name' => fake()->unique()->words(3, true),
             'status' => 'active',
@@ -26,5 +26,15 @@ class CampaignFactory extends Factory
             'target_cpa' => fake()->optional()->randomFloat(2, 10, 80),
             'target_roas' => fake()->optional()->randomFloat(2, 1, 5),
         ];
+    }
+
+    public function meta(): static
+    {
+        return $this->state(fn (array $attributes): array => ['platform' => 'meta']);
+    }
+
+    public function google(): static
+    {
+        return $this->state(fn (array $attributes): array => ['platform' => 'google']);
     }
 }
