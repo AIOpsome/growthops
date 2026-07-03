@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\RecommendedActions\Tables;
 
+use App\Filament\Resources\RecommendedActions\Actions\DecisionActions;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -83,6 +84,9 @@ class RecommendedActionsTable
             ])
             ->recordActions([
                 ViewAction::make(),
+                DecisionActions::approve(),
+                DecisionActions::editThenApprove(),
+                DecisionActions::reject(),
             ]);
     }
 }

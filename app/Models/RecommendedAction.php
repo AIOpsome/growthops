@@ -8,8 +8,10 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
-#[Fillable(['campaign_id', 'run_date', 'type', 'evidence', 'confidence', 'risk', 'expected_upside', 'status', 'narrative'])]
+#[Fillable(['campaign_id', 'run_date', 'type', 'evidence', 'confidence', 'risk', 'expected_upside', 'status', 'applied_parameter', 'narrative'])]
 class RecommendedAction extends Model
 {
     /** @use HasFactory<RecommendedActionFactory> */
@@ -25,6 +27,7 @@ class RecommendedAction extends Model
             'evidence' => 'array',
             'confidence' => 'decimal:2',
             'expected_upside' => 'decimal:2',
+            'applied_parameter' => 'decimal:2',
         ];
     }
 
@@ -46,5 +49,21 @@ class RecommendedAction extends Model
         $this->saveQuietly();
 
         return $this->narrative;
+    }
+
+    /**
+     * @return HasMany<ActionAudit, $this>
+     */
+    public function audits(): HasMany
+    {
+        return $this->hasMany(ActionAudit::class)->latest('id');
+    }
+
+    /**
+     * @return HasOne<ExecutionLog, $this>
+     */
+    public function executionLog(): HasOne
+    {
+        return $this->hasOne(ExecutionLog::class)->latestOfMany();
     }
 }
