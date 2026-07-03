@@ -13,10 +13,8 @@ it('authenticates the seeded demo user into the panel', function () {
     $this->seed(DatabaseSeeder::class);
 
     Livewire::test(Login::class)
-        ->fillForm([
-            'email' => 'demo@growthops.test',
-            'password' => config('app.demo_user_password'),
-        ])
+        ->set('data.email', 'demo@growthops.test')
+        ->set('data.password', config('app.demo_user_password'))
         ->call('authenticate')
         ->assertHasNoFormErrors();
 
