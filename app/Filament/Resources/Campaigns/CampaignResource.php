@@ -49,6 +49,22 @@ class CampaignResource extends Resource
                     ->label('Conversions')
                     ->numeric(decimalPlaces: 2)
                     ->sortable(),
+                TextColumn::make('revenue_total')
+                    ->label('Revenue')
+                    ->money('USD')
+                    ->sortable(),
+                TextColumn::make('leads_total')
+                    ->label('Leads')
+                    ->numeric()
+                    ->sortable(),
+                TextColumn::make('accepted_leads_total')
+                    ->label('Accepted')
+                    ->numeric()
+                    ->sortable(),
+                TextColumn::make('lead_acceptance_rate')
+                    ->label('Lead accept')
+                    ->numeric(decimalPlaces: 2)
+                    ->suffix('%'),
                 TextColumn::make('cpc')
                     ->label('CPC')
                     ->money('USD'),
@@ -58,13 +74,22 @@ class CampaignResource extends Resource
                 TextColumn::make('cpa')
                     ->label('CPA')
                     ->money('USD'),
+                TextColumn::make('cpl')
+                    ->label('CPL')
+                    ->money('USD'),
+                TextColumn::make('roas')
+                    ->label('ROAS')
+                    ->numeric(decimalPlaces: 2),
+                TextColumn::make('epc')
+                    ->label('EPC')
+                    ->money('USD'),
             ])
             ->defaultSort('name');
     }
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->withMetricTotals();
+        return parent::getEloquentQuery()->withMetricTotals()->withLeadTotals();
     }
 
     /**

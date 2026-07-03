@@ -40,6 +40,9 @@ class ListCampaigns extends ListRecords
                         ->options([
                             'meta' => 'Meta Ads',
                             'google' => 'Google Ads',
+                            'taboola' => 'Taboola',
+                            'tiktok' => 'TikTok',
+                            'leads' => 'Leads',
                         ])
                         ->placeholder('Auto-detect')
                         ->native(false),
