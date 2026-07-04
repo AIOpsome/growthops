@@ -8,13 +8,16 @@ use Throwable;
 
 class ActionNarrator
 {
-    public function narrate(RecommendedAction $action): string
+    /**
+     * @return array{narrative: string, reasoning: ?string}
+     */
+    public function narrate(RecommendedAction $action): array
     {
         $baseUrl = config('growthops.llm.base_url');
         $apiKey = config('growthops.llm.api_key');
 
         if (blank($baseUrl) || blank($apiKey)) {
-            return $this->template($action);
+            return ['narrative' => $this->template($action), 'reasoning' => null];
         }
 
         try {
@@ -28,13 +31,18 @@ class ActionNarrator
                 ]);
 
             if ($response->successful() && filled($response->json('choices.0.message.content'))) {
-                return trim($response->json('choices.0.message.content'));
+                return [
+                    'narrative' => trim($response->json('choices.0.message.content')),
+                    'reasoning' => filled($response->json('choices.0.message.reasoning_content'))
+                        ? trim($response->json('choices.0.message.reasoning_content'))
+                        : null,
+                ];
             }
         } catch (Throwable) {
             // fall through to template narrative
         }
 
-        return $this->template($action);
+        return ['narrative' => $this->template($action), 'reasoning' => null];
     }
 
     private function prompt(RecommendedAction $action): string

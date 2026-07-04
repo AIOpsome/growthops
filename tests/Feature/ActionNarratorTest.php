@@ -107,3 +107,39 @@ it('never calls the gateway when the narrative already exists', function () {
     expect($action->ensureNarrative())->toBe('Already generated.');
     Http::assertNothingSent();
 });
+
+it('captures the model reasoning alongside the narrative when the gateway returns it', function () {
+    config([
+        'growthops.llm.base_url' => 'https://gateway.test/v1',
+        'growthops.llm.api_key' => 'test-key',
+    ]);
+
+    Http::fake([
+        'gateway.test/*' => Http::response([
+            'choices' => [
+                ['message' => [
+                    'content' => 'Pause this campaign.',
+                    'reasoning_content' => 'We need to weigh the 7-day spend against the baseline conversions...',
+                ]],
+            ],
+        ], 200),
+    ]);
+
+    $action = RecommendedAction::factory()->for(Campaign::factory())->create(['narrative' => null, 'reasoning' => null]);
+
+    $action->ensureNarrative();
+
+    expect($action->fresh()->reasoning)->toBe('We need to weigh the 7-day spend against the baseline conversions...');
+});
+
+it('leaves reasoning null for the deterministic template fallback', function () {
+    config(['growthops.llm.base_url' => null, 'growthops.llm.api_key' => null]);
+
+    Http::fake();
+
+    $action = RecommendedAction::factory()->for(Campaign::factory())->create(['narrative' => null, 'reasoning' => null]);
+
+    $action->ensureNarrative();
+
+    expect($action->fresh()->reasoning)->toBeNull();
+});

@@ -3,6 +3,7 @@
 use App\Filament\Resources\RecommendedActions\Pages\ListRecommendedActions;
 use App\Filament\Resources\RecommendedActions\Pages\ViewRecommendedAction;
 use App\Models\Campaign;
+use App\Models\DailyMetric;
 use App\Models\RecommendedAction;
 use App\Models\User;
 use Livewire\Livewire;
@@ -42,4 +43,32 @@ it('shows the evidence payload including the Meta caveat on the view page', func
         ->assertOk()
         ->assertSee('meta_72h_provisional')
         ->assertSee('budget_bleeder');
+});
+
+it('runs the detector engine from the browser via the "Run daily analysis" action', function () {
+    $campaign = Campaign::factory()->google()->create();
+
+    foreach (range(13, 7) as $offset) {
+        DailyMetric::factory()->for($campaign)->create([
+            'date' => now()->subDays($offset)->toDateString(),
+            'spend' => 500,
+            'conversions' => 12,
+        ]);
+    }
+
+    foreach (range(6, 0) as $offset) {
+        DailyMetric::factory()->for($campaign)->create([
+            'date' => now()->subDays($offset)->toDateString(),
+            'spend' => 500,
+            'conversions' => 0,
+        ]);
+    }
+
+    expect(RecommendedAction::query()->count())->toBe(0);
+
+    Livewire::test(ListRecommendedActions::class)
+        ->callAction('runAnalysis')
+        ->assertOk();
+
+    expect(RecommendedAction::query()->where('campaign_id', $campaign->id)->where('type', 'pause')->exists())->toBeTrue();
 });

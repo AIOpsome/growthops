@@ -39,6 +39,19 @@ class RecommendedActionInfolist
                             ->listWithLineBreaks()
                             ->badge(),
                     ]),
+                Section::make('AI reasoning')
+                    ->description('The model\'s own chain-of-thought before it wrote the narrative below. Only present for live LLM calls — the deterministic fallback has none.')
+                    ->visible(function (RecommendedAction $record): bool {
+                        $record->ensureNarrative();
+
+                        return filled($record->reasoning);
+                    })
+                    ->schema([
+                        TextEntry::make('reasoning')
+                            ->hiddenLabel()
+                            ->color('gray')
+                            ->columnSpanFull(),
+                    ]),
                 Section::make('Narrative')
                     ->schema([
                         TextEntry::make('narrative')
