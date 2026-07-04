@@ -4,9 +4,11 @@ namespace App\Filament\Resources\Campaigns;
 
 use App\Filament\Resources\Campaigns\Pages\ListCampaigns;
 use App\Models\Campaign;
+use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ViewColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -27,8 +29,27 @@ class CampaignResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('platform')
+                TextColumn::make('analysis_status')
+                    ->label('Status')
                     ->badge()
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'requires_action' => 'Requires action',
+                        'healthy' => 'Healthy',
+                        default => 'Not analyzed yet',
+                    })
+                    ->color(fn (string $state): string => match ($state) {
+                        'requires_action' => 'warning',
+                        'healthy' => 'success',
+                        default => 'gray',
+                    })
+                    ->icon(fn (string $state): string => match ($state) {
+                        'requires_action' => 'heroicon-o-exclamation-triangle',
+                        'healthy' => 'heroicon-o-check-circle',
+                        default => 'heroicon-o-clock',
+                    }),
+                ViewColumn::make('platform')
+                    ->view('filament.components.platform-badge')
+                    ->viewData(fn (Campaign $record): array => ['platform' => $record->platform])
                     ->sortable(),
                 TextColumn::make('name')
                     ->searchable()
@@ -89,11 +110,11 @@ class CampaignResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->withMetricTotals()->withLeadTotals();
+        return parent::getEloquentQuery()->withMetricTotals()->withLeadTotals()->withActionStatus();
     }
 
     /**
-     * @return array<string, \Filament\Resources\Pages\PageRegistration>
+     * @return array<string, PageRegistration>
      */
     public static function getPages(): array
     {
