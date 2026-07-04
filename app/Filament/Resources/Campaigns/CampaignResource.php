@@ -8,6 +8,7 @@ use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ViewColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -46,8 +47,9 @@ class CampaignResource extends Resource
                         'healthy' => 'heroicon-o-check-circle',
                         default => 'heroicon-o-clock',
                     }),
-                TextColumn::make('platform')
-                    ->badge()
+                ViewColumn::make('platform')
+                    ->view('filament.components.platform-badge')
+                    ->viewData(fn (Campaign $record): array => ['platform' => $record->platform])
                     ->sortable(),
                 TextColumn::make('name')
                     ->searchable()

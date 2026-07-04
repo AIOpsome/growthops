@@ -32,6 +32,7 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogo(fn (): HtmlString => new HtmlString(view('filament.partials.brand')->render()))
             ->brandLogoHeight('1.75rem')
             ->darkMode()
+            ->sidebarCollapsibleOnDesktop()
             ->login()
             ->colors([
                 'primary' => Color::Amber,

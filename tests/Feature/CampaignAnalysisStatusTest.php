@@ -60,3 +60,19 @@ it('renders the status badge on the campaigns table for all three states', funct
         ->assertSee('Healthy')
         ->assertSee('Requires action');
 });
+
+it('renders a platform badge for every known platform without error', function () {
+    config(['app.key' => 'base64:YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=']);
+    actingAs(User::factory()->create());
+
+    foreach (['google', 'meta', 'tiktok', 'taboola'] as $platform) {
+        Campaign::factory()->create(['platform' => $platform]);
+    }
+
+    Livewire::test(ListCampaigns::class)
+        ->assertOk()
+        ->assertSee('Google')
+        ->assertSee('Meta')
+        ->assertSee('TikTok')
+        ->assertSee('Taboola');
+});
