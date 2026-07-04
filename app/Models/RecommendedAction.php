@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-#[Fillable(['campaign_id', 'run_date', 'type', 'evidence', 'confidence', 'risk', 'expected_upside', 'status', 'applied_parameter', 'narrative'])]
+#[Fillable(['campaign_id', 'run_date', 'type', 'evidence', 'confidence', 'risk', 'expected_upside', 'status', 'applied_parameter', 'narrative', 'reasoning'])]
 class RecommendedAction extends Model
 {
     /** @use HasFactory<RecommendedActionFactory> */
@@ -45,7 +45,9 @@ class RecommendedAction extends Model
             return $this->narrative;
         }
 
-        $this->narrative = app(ActionNarrator::class)->narrate($this);
+        $result = app(ActionNarrator::class)->narrate($this);
+        $this->narrative = $result['narrative'];
+        $this->reasoning = $result['reasoning'];
         $this->saveQuietly();
 
         return $this->narrative;
