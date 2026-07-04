@@ -127,7 +127,11 @@ return [
         'base_url' => env('LLM_BASE_URL'),
         'model' => env('LLM_MODEL', 'kimi-k2.7'),
         'api_key' => env('LLM_API_KEY'),
-        'timeout' => 15,
+        // Kimi K2.7 is a reasoning model; real narration prompts (full evidence
+        // JSON + structured instructions) consistently take 12-16s to respond,
+        // so a 15s timeout intermittently falls back to the template. 45s gives
+        // real headroom without risking a truly hung request.
+        'timeout' => 45,
     ],
 
 ];
