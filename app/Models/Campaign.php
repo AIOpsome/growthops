@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['platform', 'external_id', 'name', 'status', 'daily_budget', 'target_cpa', 'target_roas'])]
+#[Fillable(['platform', 'external_id', 'name', 'status', 'daily_budget', 'target_cpa', 'target_roas', 'last_analyzed_at'])]
 class Campaign extends Model
 {
     /** @use HasFactory<CampaignFactory> */
@@ -69,6 +69,17 @@ class Campaign extends Model
     }
 
     /**
+     * @param  Builder<Campaign>  $query
+     * @return Builder<Campaign>
+     */
+    public function scopeWithActionStatus(Builder $query): Builder
+    {
+        return $query->withCount([
+            'recommendedActions as pending_actions_total' => fn (Builder $query): Builder => $query->where('status', 'pending'),
+        ]);
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
@@ -77,6 +88,7 @@ class Campaign extends Model
             'daily_budget' => 'decimal:2',
             'target_cpa' => 'decimal:2',
             'target_roas' => 'decimal:2',
+            'last_analyzed_at' => 'datetime',
         ];
     }
 
@@ -162,6 +174,33 @@ class Campaign extends Model
 
             return $resolvedLeads > 0 ? ($this->accepted_leads_total / $resolvedLeads) * 100 : null;
         });
+    }
+
+    /**
+     * @return Attribute<string, never>
+     */
+    protected function analysisStatus(): Attribute
+    {
+        return Attribute::get(function (): string {
+            if ($this->last_analyzed_at === null) {
+                return 'not_analyzed';
+            }
+
+            return $this->pendingActionsTotal() > 0 ? 'requires_action' : 'healthy';
+        });
+    }
+
+    private function pendingActionsTotal(): int
+    {
+        if (array_key_exists('pending_actions_total', $this->attributes)) {
+            return (int) $this->attributes['pending_actions_total'];
+        }
+
+        if (! $this->exists) {
+            return 0;
+        }
+
+        return $this->recommendedActions()->where('status', 'pending')->count();
     }
 
     private function metricTotal(string $attribute, string $column): float

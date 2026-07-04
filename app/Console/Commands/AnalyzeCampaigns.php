@@ -55,6 +55,8 @@ class AnalyzeCampaigns extends Command
                 ->where('status', 'pending')
                 ->whereNotIn('type', $keptTypes)
                 ->delete();
+
+            $campaign->update(['last_analyzed_at' => now()]);
         });
 
         $this->info("Generated {$generated} recommended action(s) for {$runDate->toDateString()}.");

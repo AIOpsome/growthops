@@ -50,3 +50,16 @@ it('removes a stale pending action that no longer fires', function () {
     expect(RecommendedAction::query()->find($stale->id))->toBeNull()
         ->and(RecommendedAction::query()->where('type', 'pause')->exists())->toBeTrue();
 });
+
+it('stamps last_analyzed_at on every campaign it processes, regardless of outcome', function () {
+    $healthy = Campaign::factory()->google()->create();
+    metricWindow($healthy, $this->runDate, 14, 0, ['spend' => 100, 'conversions' => 10]);
+
+    expect($this->campaign->fresh()->last_analyzed_at)->toBeNull()
+        ->and($healthy->fresh()->last_analyzed_at)->toBeNull();
+
+    $this->artisan('growthops:analyze', ['--date' => '2026-06-30'])->assertSuccessful();
+
+    expect($this->campaign->fresh()->last_analyzed_at)->not->toBeNull()
+        ->and($healthy->fresh()->last_analyzed_at)->not->toBeNull();
+});
