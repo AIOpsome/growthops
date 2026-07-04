@@ -3,8 +3,10 @@
 namespace App\Filament\Resources\RecommendedActions\Tables;
 
 use App\Filament\Resources\RecommendedActions\Actions\DecisionActions;
+use App\Models\RecommendedAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ViewColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
@@ -19,16 +21,10 @@ class RecommendedActionsTable
                     ->label('Campaign')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('campaign.platform')
+                ViewColumn::make('campaign.platform')
                     ->label('Platform')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'meta' => 'info',
-                        'google' => 'danger',
-                        'tiktok' => 'gray',
-                        'taboola' => 'warning',
-                        default => 'gray',
-                    }),
+                    ->view('filament.components.platform-badge')
+                    ->viewData(fn (RecommendedAction $record): array => ['platform' => $record->campaign->platform]),
                 TextColumn::make('type')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
