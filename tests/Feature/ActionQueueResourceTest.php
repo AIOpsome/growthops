@@ -72,3 +72,13 @@ it('runs the detector engine from the browser via the "Run daily analysis" actio
 
     expect(RecommendedAction::query()->where('campaign_id', $campaign->id)->where('type', 'pause')->exists())->toBeTrue();
 });
+
+it('renders a platform icon badge for the action queue rows', function () {
+    RecommendedAction::factory()->for(Campaign::factory()->meta())->create(['type' => 'pause']);
+    RecommendedAction::factory()->for(Campaign::factory()->google())->create(['type' => 'scale']);
+
+    Livewire::test(ListRecommendedActions::class)
+        ->assertOk()
+        ->assertSee('Meta')
+        ->assertSee('Google');
+});
