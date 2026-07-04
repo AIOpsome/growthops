@@ -33,6 +33,42 @@
         display: none;
     }
 
+    /* The sidebar collapse/expand toggle moves out of the topbar entirely and
+       onto the sidebar's own footer — see sidebar-collapse-toggle.blade.php. */
+    .fi-topbar-collapse-sidebar-btn-ctn {
+        display: none;
+    }
+
+    .growthops-sidebar-toggle-ctn {
+        padding: 0.5rem 0.75rem;
+        border-top: 1px solid rgba(148, 163, 184, 0.15);
+    }
+
+    .growthops-sidebar-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        border: none;
+        background: transparent;
+        color: rgb(148 163 184);
+        font-size: 0.8125rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 100ms;
+    }
+
+    .growthops-sidebar-toggle:hover {
+        background: rgba(148, 163, 184, 0.1);
+    }
+
+    .growthops-sidebar-toggle--collapsed {
+        padding: 0.5rem 0;
+    }
+
     .growthops-theme-toggle {
         position: relative;
         display: inline-flex;
