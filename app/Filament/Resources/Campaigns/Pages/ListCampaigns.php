@@ -32,7 +32,9 @@ class ListCampaigns extends ListRecords
                 ->schema([
                     FileUpload::make('csv')
                         ->label('CSV file')
+                        ->helperText('Max '.(config('growthops.import.max_csv_size_kb') / 1024).'MB — large uploads can generate many campaigns, each triggering an LLM narrative call.')
                         ->acceptedFileTypes(['text/csv', 'text/plain', 'application/vnd.ms-excel'])
+                        ->maxSize(config('growthops.import.max_csv_size_kb'))
                         ->storeFiles(false)
                         ->required(),
                     Select::make('platform')

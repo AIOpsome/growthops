@@ -134,4 +134,37 @@ return [
         'timeout' => 45,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | CSV import limits
+    |--------------------------------------------------------------------------
+    |
+    | Each campaign a CSV import produces can eventually trigger one lazy LLM
+    | narrative call when a human views its action. A large upload means many
+    | campaigns means many narrative calls — cap file size to keep that bounded.
+    |
+    */
+
+    'import' => [
+        'max_csv_size_kb' => (int) env('GROWTHOPS_MAX_CSV_SIZE_KB', 2048),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Demo reset
+    |--------------------------------------------------------------------------
+    |
+    | A rehearsal-only utility, deliberately NOT part of the /admin panel:
+    | resets all campaign/action data back to the canonical demo-seed story
+    | in one click. Gated by an unguessable token from the deploy env, never
+    | committed anywhere — leaving the token unset disables the route entirely
+    | (404), which is also this app's default in every environment except the
+    | founder's own deploy.
+    |
+    */
+
+    'demo_reset' => [
+        'token' => env('DEMO_RESET_TOKEN'),
+    ],
+
 ];

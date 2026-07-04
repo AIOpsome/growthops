@@ -236,3 +236,21 @@ it('imports leads from the Filament campaign table action', function () {
     expect(Lead::query()->count())->toBe(4)
         ->and($campaign->dailyMetrics()->firstOrFail()->revenue)->toBe('240.00');
 });
+
+it('rejects a CSV upload larger than the configured size limit', function () {
+    config(['app.key' => 'base64:YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=']);
+    config(['growthops.import.max_csv_size_kb' => 1]);
+
+    actingAs(User::factory()->create());
+
+    $upload = UploadedFile::fake()->create('too-big.csv', 2 * 1024);
+
+    Livewire::test(ListCampaigns::class)
+        ->callAction(TestAction::make('importCsv'), data: [
+            'csv' => $upload,
+            'platform' => null,
+        ])
+        ->assertHasFormErrors(['csv']);
+
+    expect(Campaign::query()->count())->toBe(0);
+});
