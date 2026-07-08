@@ -9,6 +9,8 @@ Built in ~36 hours for It's Today Media's Build Challenge by [Waqas Ahmed](https
 
 ---
 
+<video src="docs/growthops-walkthrough.webm" controls width="100%"></video>
+
 ## 1. What it does
 
 Media buyers already live in CSV exports pulled from four different dashboards. The hard part isn't the data — it's turning "here's what happened" into "here's what to do about it, today" without babysitting every campaign by hand.
