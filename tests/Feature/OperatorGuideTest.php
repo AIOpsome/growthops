@@ -8,6 +8,7 @@ use App\Models\Lead;
 use App\Models\RecommendedAction;
 use App\Models\User;
 use App\Services\OperatorGuideService;
+use Filament\Actions\Action;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
 use RuntimeException;
@@ -100,7 +101,18 @@ it('drafts a campaign brief behind confirmation without creating a campaign', fu
 
     $invocation = GuideInvocation::query()->where('workflow', 'fill_campaign_brief')->firstOrFail();
     expect($invocation->confirmed)->toBeTrue();
-    expect($invocation->details['name'])->toBe('Q3 Prospecting');
+    expect($invocation->details['platform'])->toBe('meta');
+    expect($invocation->details['daily_budget'])->toBe(150);
+    expect($invocation->details)->not->toHaveKey('notes');
+    expect($invocation->details)->not->toHaveKey('name');
+    expect($invocation->details)->not->toHaveKey('objective');
+});
+
+it('gates the fill-campaign-brief action behind a confirmation modal', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(OperatorGuide::class)
+        ->assertActionExists('fillCampaignBrief', fn (Action $action): bool => $action->isConfirmationRequired());
 });
 
 it('summarizes a workflow using the shared LLM gateway when configured', function () {
@@ -143,6 +155,28 @@ it('only allows workflows on the explicit allowlist', function () {
 
     $service->runReadWorkflow('pause_campaign');
 })->throws(InvalidArgumentException::class);
+
+it('resolves intents on word boundaries so substrings do not misroute', function () {
+    $service = app(OperatorGuideService::class);
+
+    expect($service->resolveIntent('prepare a high level report'))->toBe('prepare_weekly_report');
+    expect($service->resolveIntent('fulfill the open orders'))->toBeNull();
+    expect($service->resolveIntent('show me risky campaigns'))->toBe('show_risky_campaigns');
+});
+
+it('deduplicates risky campaigns so the count matches the listed campaigns', function () {
+    $this->actingAs(User::factory()->create());
+
+    $campaign = Campaign::factory()->create();
+    RecommendedAction::factory()->for($campaign)->create(['status' => 'pending', 'risk' => 'high']);
+    RecommendedAction::factory()->for($campaign)->create(['status' => 'pending', 'risk' => 'medium']);
+
+    $result = app(OperatorGuideService::class)->runReadWorkflow('show_risky_campaigns');
+
+    expect($result['data']['count'])->toBe(1);
+    expect($result['data']['campaigns'])->toHaveCount(1);
+    expect($result['data']['campaigns'][0]['risk'])->toBe('high');
+});
 
 it('redacts email addresses and truncates the logged intent to avoid PII', function () {
     $service = app(OperatorGuideService::class);

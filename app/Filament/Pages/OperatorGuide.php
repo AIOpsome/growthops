@@ -138,7 +138,14 @@ class OperatorGuide extends Page
                     workflow: 'fill_campaign_brief',
                     rawIntent: 'fill campaign brief',
                     confirmed: true,
-                    details: $data,
+                    // Only structured fields enter the audit trail; free-text
+                    // name/objective/notes are deliberately excluded so operator-
+                    // authored prose never lands in the log verbatim.
+                    details: [
+                        'platform' => $data['platform'],
+                        'daily_budget' => $data['daily_budget'],
+                        'target_cpa' => $data['target_cpa'] ?? null,
+                    ],
                 );
 
                 $this->result = [

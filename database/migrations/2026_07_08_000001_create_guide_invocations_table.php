@@ -18,6 +18,7 @@ return new class extends Migration
             $table->timestamp('created_at')->nullable();
 
             $table->index(['workflow', 'created_at']);
+            $table->index(['actor', 'created_at']);
         });
     }
 

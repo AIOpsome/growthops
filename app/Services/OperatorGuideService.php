@@ -32,7 +32,7 @@ class OperatorGuideService
         'show_risky_campaigns' => [
             'label' => 'Show risky campaigns',
             'mode' => 'read',
-            'keywords' => ['risk', 'risky', 'danger', 'high'],
+            'keywords' => ['risk', 'risky', 'danger'],
         ],
         'prepare_weekly_report' => [
             'label' => 'Prepare weekly report',
@@ -69,7 +69,9 @@ class OperatorGuideService
     /**
      * Map a free-text operator question onto exactly one allowlisted workflow.
      * Returns null when nothing in the allowlist matches, so unrecognized
-     * requests never fall through to an unbounded action.
+     * requests never fall through to an unbounded action. Matching is
+     * word-boundary aware so substrings never misroute (e.g. "fulfill" must
+     * not trigger the "fill" keyword).
      */
     public function resolveIntent(string $question): ?string
     {
@@ -77,7 +79,7 @@ class OperatorGuideService
 
         foreach (self::WORKFLOWS as $workflow => $definition) {
             foreach ($definition['keywords'] as $keyword) {
-                if (str_contains($normalized, $keyword)) {
+                if (preg_match('/\b'.preg_quote($keyword, '/').'\b/', $normalized) === 1) {
                     return $workflow;
                 }
             }
@@ -115,8 +117,10 @@ class OperatorGuideService
 
     /**
      * Log guide usage. The raw operator question is never stored verbatim — we
-     * persist the resolved workflow key plus a redacted, truncated intent so no
-     * lead PII leaks into the audit trail.
+     * persist the resolved workflow key plus an email-redacted, 120-char
+     * truncated intent. Email redaction is best-effort only (it does not strip
+     * names, phone numbers, or account IDs), so callers must never pass lead
+     * records or other sensitive free text as $details.
      *
      * @param  array<string, mixed>|null  $details
      */
@@ -173,18 +177,20 @@ class OperatorGuideService
             ->whereIn('risk', ['high', 'medium'])
             ->get();
 
+        $campaigns = $actions
+            ->sortByDesc(fn (RecommendedAction $action): int => $action->risk === 'high' ? 1 : 0)
+            ->unique('campaign_id')
+            ->map(fn (RecommendedAction $action): array => [
+                'campaign' => $action->campaign->name,
+                'platform' => $action->campaign->platform,
+                'risk' => $action->risk,
+                'type' => $action->type,
+            ])
+            ->values();
+
         return [
-            'count' => $actions->pluck('campaign_id')->unique()->count(),
-            'campaigns' => $actions
-                ->sortByDesc(fn (RecommendedAction $action): int => $action->risk === 'high' ? 1 : 0)
-                ->map(fn (RecommendedAction $action): array => [
-                    'campaign' => $action->campaign->name,
-                    'platform' => $action->campaign->platform,
-                    'risk' => $action->risk,
-                    'type' => $action->type,
-                ])
-                ->values()
-                ->all(),
+            'count' => $campaigns->count(),
+            'campaigns' => $campaigns->all(),
         ];
     }
 
@@ -290,6 +296,12 @@ class OperatorGuideService
         };
     }
 
+    /**
+     * Best-effort scrub of the operator's question before it enters the audit
+     * trail: strips email addresses and truncates to 120 chars. This is not a
+     * full PII redactor — names, phone numbers, and account IDs survive — so it
+     * relies on intents being operator-typed workflow requests, not lead data.
+     */
     private function normalizeIntent(string $rawIntent): string
     {
         $redacted = preg_replace('/[\w.+-]+@[\w-]+\.[\w.-]+/', '[redacted-email]', $rawIntent) ?? '';
