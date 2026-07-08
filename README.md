@@ -9,7 +9,7 @@ Built in ~36 hours for It's Today Media's Build Challenge by [Waqas Ahmed](https
 
 ---
 
-<video src="docs/growthops-walkthrough.webm" controls width="100%"></video>
+[growthops-walkthrough.webm](https://github.com/user-attachments/assets/d1d96349-8232-47f0-87a7-566e3989cf85)
 
 ## 1. What it does
 
