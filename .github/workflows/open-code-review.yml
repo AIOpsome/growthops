@@ -2,10 +2,17 @@ name: Open Code Review
 
 # pull_request_target, not pull_request: plain `pull_request` gets no org
 # secrets for fork PRs, so the LLM call would silently have no credentials
-# for external contributions. This is safe here ONLY because the called
-# workflow's job never checks out-and-executes code from the PR - it only
-# diffs it. Do not add a build/test/install step to this job without first
-# reading AIOpsome/growthops-p2p's docs/open-code-review.md.
+# for external contributions. This is safe here ONLY because this job never
+# checks out-and-executes code from the PR - it only diffs it. Do not add a
+# build/test/install step to this job without first reading
+# AIOpsome/growthops-p2p's docs/open-code-review.md.
+#
+# Self-contained (not a cross-repo reusable-workflow call): calling a
+# reusable workflow stored in a private repo from a different repo in the
+# same org failed with "error parsing called workflow" even for a trivial
+# 3-line test - this org is on the GitHub Free plan, which is the suspected
+# (not fully doc-confirmed) cause. Duplicating this ~20-line job in each
+# pilot repo sidesteps that entirely.
 on:
   pull_request_target:
     types: [opened, synchronize]
@@ -20,6 +27,19 @@ permissions:
   issues: write
 
 jobs:
-  review:
-    uses: AIOpsome/ci/.github/workflows/open-code-review.yml@main
-    secrets: inherit
+  open-code-review:
+    name: open-code-review
+    runs-on: ubuntu-latest
+    steps:
+      # Pinned to both the Action's commit SHA (v1.7.6) and the npm package
+      # version it installs at runtime (ocr_version) - pinning only one of
+      # the two still leaves the actual review engine floating at `latest`.
+      - uses: alibaba/open-code-review@375e33a51c01b4f1077f6dee0da10b0df96cd024 # v1.7.6
+        with:
+          llm_url: ${{ secrets.OCR_LLM_URL }}
+          llm_auth_token: ${{ secrets.OCR_LLM_AUTH_TOKEN }}
+          llm_model: ${{ vars.OCR_LLM_MODEL }}
+          llm_use_anthropic: ${{ vars.OCR_LLM_USE_ANTHROPIC }}
+          ocr_version: "1.7.6"
+          sticky_summary: 'true'
+          incremental: 'true'
