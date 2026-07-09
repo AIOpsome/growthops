@@ -11,7 +11,6 @@ use App\Services\OperatorGuideService;
 use Filament\Actions\Action;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
-use RuntimeException;
 
 it('redirects unauthenticated visitors away from the operator guide', function () {
     $this->get('/admin/operator-guide')->assertRedirect('/admin/login');
@@ -168,8 +167,8 @@ it('deduplicates risky campaigns so the count matches the listed campaigns', fun
     $this->actingAs(User::factory()->create());
 
     $campaign = Campaign::factory()->create();
-    RecommendedAction::factory()->for($campaign)->create(['status' => 'pending', 'risk' => 'high']);
-    RecommendedAction::factory()->for($campaign)->create(['status' => 'pending', 'risk' => 'medium']);
+    RecommendedAction::factory()->for($campaign)->create(['status' => 'pending', 'risk' => 'high', 'type' => 'pause']);
+    RecommendedAction::factory()->for($campaign)->create(['status' => 'pending', 'risk' => 'medium', 'type' => 'fix']);
 
     $result = app(OperatorGuideService::class)->runReadWorkflow('show_risky_campaigns');
 
