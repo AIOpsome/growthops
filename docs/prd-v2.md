@@ -27,6 +27,34 @@ audit trail derived from the raw log, two-peer public showcase behind Traefik + 
 
 Everything below is what's missing relative to this repo.
 
+### A0.5. Panel-layer swap — react-admin replaces AdminJS (do this first)
+
+AdminJS was chosen for its adapter model (`BaseResource`/`BaseDatabase` over an arbitrary store —
+one of very few admin frameworks that can sit on Hyperbee), and that bet paid off for auto-CRUD.
+But Part A is a spec for *not* accepting AdminJS's default UI, and every Filament nicety this
+document asks for — status badges, formatted metric columns, header actions with form schemas,
+evidence infolists, edit-then-approve modals — becomes a custom React component compiled through
+AdminJS's proprietary bundler. That per-item overhead dominates the remaining work.
+
+**Decision:** replace the panel layer with **react-admin** over a thin JSON API before starting
+A1. Rationale: react-admin's `dataProvider` interface (`getList`/`getOne`/`update`/custom
+actions) maps ~1:1 onto the existing `lib/read-model.js` + `lib/actions.js` functions, and all
+customization is plain React — no proprietary bundler. Alternatives considered: Refine (equally
+viable, slightly more assembly), a fully custom UI (competitive for two resources, but more code
+for no ecosystem), Payload/Directus/Strapi (DB-coupled, can't sit on Hyperbee), Forest Admin
+(cloud-coupled, violates the no-cloud invariant).
+
+**Requirements**
+- Thin JSON API (Express routes) exposing the read model and action functions; all writes still
+  go through the apply path (A12 invariants unchanged).
+- react-admin app with exactly the two resources from A2, served as a self-contained static build
+  by the same local Express server — no CDN assets at runtime, preserving the no-cloud property.
+- Preserve three behavior contracts the existing deploy depends on: `GET /health`,
+  `GROWTHOPS_ADMIN_ROOT_PATH` prefix support, and the localhost-default bind.
+- The AdminJS adapter (`lib/adminjs/*`) is deleted, not kept alongside — one panel, no drift.
+- Existing HTTP-level tests (approve/reject through the panel's API, health, rootPath) are ported
+  to the new API routes, not weakened.
+
 ### A1. Branding — AIOpsome logo, "GrowthOps P2P Agent"
 
 The P2P panel currently shows AdminJS's default logo and the branding string
@@ -270,10 +298,11 @@ stream — v2 should define the ingestion interface even if connectors come late
 
 ## Suggested sequencing
 
-**Part A (growthops-p2p repo):** A1+A2 (branding/nav — small, high-visibility) → A5+A6 (columns,
-health, evidence — the "looks like the same product" milestone) → A3+A4 (Import CSV + Run daily
-analysis in-UI) → A7 (decision workflow) → A8+A10 (data model + detectors) → A9 (LLM narrative)
-→ A11 (Operator Guide, optional).
+**Part A (growthops-p2p repo):** A0.5 (react-admin swap — the foundation every UI item builds
+on) → A1+A2 (branding/nav — small, high-visibility) → A5+A6 (columns, health, evidence — the
+"looks like the same product" milestone) → A3+A4 (Import CSV + Run daily analysis in-UI) → A7
+(decision workflow) → A8+A10 (data model + detectors) → A9 (LLM narrative) → A11 (Operator
+Guide, optional).
 
 **Part B (this repo):** B3 (lead-quality detector — pure detector work, no new infra) → B5
 (digest) → B1 (agent surface — unlocks the swarm story) → B4 (execution bridge design doc) →
