@@ -1,0 +1,25 @@
+name: Open Code Review
+
+# pull_request_target, not pull_request: plain `pull_request` gets no org
+# secrets for fork PRs, so the LLM call would silently have no credentials
+# for external contributions. This is safe here ONLY because the called
+# workflow's job never checks out-and-executes code from the PR - it only
+# diffs it. Do not add a build/test/install step to this job without first
+# reading AIOpsome/growthops-p2p's docs/open-code-review.md.
+on:
+  pull_request_target:
+    types: [opened, synchronize]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  review:
+    uses: AIOpsome/ci/.github/workflows/open-code-review.yml@main
+    secrets: inherit
