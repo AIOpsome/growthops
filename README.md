@@ -2,9 +2,6 @@
 
 A supervised AI media-buyer control plane. Upload the CSV exports your team already has from Meta, Google, Taboola, and TikTok, and it turns them into a single daily action queue — pause, scale, investigate, fix — each with the evidence behind it, a confidence score, a risk level, and an expected-dollar upside. Nothing ever touches an ad account without a human clicking approve first.
 
-**Live demo:** https://growthops.aiopsome.com/admin
-**Login:** `demo@growthops.test` / `growthops-demo`
-
 Built in ~36 hours for It's Today Media's Build Challenge by [Waqas Ahmed](https://github.com/wakqasahmed), founder of [Opsome](https://github.com/AIOpsome/opsome) — an agentic-commerce ops platform this demo borrows its core architecture from.
 
 ---
@@ -85,7 +82,7 @@ Laravel 13 + Filament v5.6, SQLite, deployed via Docker + Traefik with Let's Enc
 
 ## 5-minute guided demo
 
-1. **Log in** at https://growthops.aiopsome.com/admin with `demo@growthops.test` / `growthops-demo`. You'll land on the campaign table — seven campaigns across Meta, Google, Taboola, and TikTok, 14 days of real normalized metrics each.
+1. **Log in** to a local copy (see [Local setup](#local-setup)) at http://localhost:8000/admin as `demo@growthops.test`. You'll land on the campaign table — seven campaigns across Meta, Google, Taboola, and TikTok, 14 days of real normalized metrics each.
 2. **Open the action queue** (Recommended Actions in the sidebar). Three pending recommendations:
    - `Meta Prospecting - Winter Sale` → **Pause**, confidence 0.70, upside ≈ $3,500 — a budget bleeder.
    - `Google Search - Branded Terms` → **Scale**, confidence 0.80, upside ≈ $1,890 — a ROAS winner.
@@ -103,7 +100,7 @@ cd growthops
 docker compose up --build
 ```
 
-The container runs migrations and seeds the demo dataset on first boot only (re-running `docker compose up` won't wipe your decisions). Visit `http://localhost:8000/admin`, log in with the demo credentials above.
+The container runs migrations and seeds the demo dataset on first boot only (re-running `docker compose up` won't wipe your decisions). Visit `http://localhost:8000/admin` and log in as `demo@growthops.test` with the password set in `DEMO_USER_PASSWORD` (see `.env.example`). Set your own value before exposing a copy publicly.
 
 To regenerate the daily action queue manually: `docker compose exec app php artisan growthops:analyze`.
 
